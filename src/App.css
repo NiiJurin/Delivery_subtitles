@@ -120,7 +120,24 @@ body {
      2px  2px 0 white;
 }
 
-/* ログエリア */
+/* 弾幕エリア */
+.danmaku {
+  position: absolute;
+  left: 100vw;
+  font-size: 28px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 2px 2px 4px #000, -2px -2px 4px #000;
+  white-space: nowrap;
+  animation: move-danmaku 8s linear forwards;
+  pointer-events: none;
+}
+@keyframes move-danmaku {
+  0% { left: 100vw; }
+  100% { left: -500px; }
+}
+
+/* 認識ログ */
 .log-area {
   flex: 1;
   background-color: #1f1f1f;
@@ -145,6 +162,38 @@ body {
   margin-bottom: 8px;
   font-size: 14px;
   border-left: 4px solid #00bcd4;
+}
+
+/* URL入力行（log-areaの上に設置用） */
+.danmaku-url-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 24px 8px 24px;
+  background: #f5f9fc;
+  border-bottom: 1px solid #e0e6ef;
+}
+
+.danmaku-url-row input {
+  font-size: 15px;
+  border-radius: 4px;
+  border: 1px solid #bbb;
+  padding: 6px 10px;
+}
+
+.danmaku-url-row button {
+  background: #2a5298;
+  color: #fff;
+  font-size: 15px;
+  border-radius: 4px;
+  border: none;
+  padding: 7px 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.danmaku-url-row button:hover {
+  background: #183156;
 }
 
 /* 設定モーダル */

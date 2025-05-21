@@ -11,6 +11,9 @@ const App = () => {
   const [autoRestart, setAutoRestart] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [bgColor, setBgColor] = useState("#00ff00");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoId, setVideoId] = useState(""); // 今回はURLごと送る
+  const [danmaku, setDanmaku] = useState([]);
 
   const [subtitleStyle, setSubtitleStyle] = useState({
     fontSize: "36px",
@@ -19,6 +22,7 @@ const App = () => {
     outline: "white"
   });
 
+  // 音声認識
   useEffect(() => {
     if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
       alert("このブラウザは音声認識に対応していません");
@@ -49,11 +53,9 @@ const App = () => {
       const results = [...event.results].slice(event.resultIndex);
       results.forEach((result) => {
         const text = result[0].transcript.trim();
-
         if (!result.isFinal) {
           setInterimText(text);
         }
-
         if (result.isFinal && text !== "") {
           setSubtitleText(text);
           setInterimText("");
@@ -83,8 +85,24 @@ const App = () => {
     setLang((prevLang) => (prevLang === "ja-JP" ? "en-US" : "ja-JP"));
   };
 
-
-
+  // 弾幕WebSocket
+  useEffect(() => {
+    if (!videoId) return;
+    const ws = new window.WebSocket("ws://localhost:3002");
+    ws.onopen = () => ws.send(videoId); // videoIdはURLごと送る
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      setDanmaku(prev => [
+        ...prev,
+        {
+          id: Date.now() + Math.random(),
+          text: msg.text,
+          top: Math.random() * 220 + 10 // 10~230pxくらいの範囲で上下にバラす
+        }
+      ]);
+    };
+    return () => ws.close();
+  }, [videoId]);
 
   return (
     <div className="app-container">
@@ -114,6 +132,15 @@ const App = () => {
 
       <div className="main-content">
         <div className="chromakey-area" style={{ backgroundColor: bgColor }}>
+          {/* 弾幕コメント */}
+          {danmaku.map((d) => (
+            <span
+              key={d.id}
+              className="danmaku"
+              style={{ top: d.top }}
+            >{d.text}</span>
+          ))}
+          {/* 音声認識字幕 */}
           <div
             className="subtitle"
             style={{
@@ -132,7 +159,36 @@ const App = () => {
           </div>
         </div>
 
+        {/* 右カラム(log-area)の最上部にdanmaku-url-rowを追加 */}
         <div className="log-area">
+          <div className="danmaku-url-row">
+            <input
+              type="text"
+              placeholder="YouTube配信URLを入力"
+              value={videoUrl}
+              onChange={e => setVideoUrl(e.target.value)}
+              style={{
+                width: 260,
+                padding: 6,
+                fontSize: 15,
+                borderRadius: 4,
+                border: "1px solid #ccc",
+                marginRight: 8,
+              }}
+            />
+            <button
+              style={{
+                padding: "7px 16px",
+                fontSize: 15,
+                borderRadius: 4,
+                background: "#2a5298",
+                color: "#fff",
+                border: "none",
+                fontWeight: "bold",
+              }}
+              onClick={() => setVideoId(videoUrl)} // URLごとサーバーへ
+            >弾幕開始</button>
+          </div>
           <h3>認識ログ</h3>
           <div className="log-list">
             {logs.map((log, index) => (
@@ -147,7 +203,6 @@ const App = () => {
       {showSettings && (
         <div className="settings-modal modern">
           <h3>⚙️ 字幕スタイル設定</h3>
-
           {/* フォントサイズ */}
           <label>
             フォントサイズ:
@@ -175,7 +230,6 @@ const App = () => {
               </button>
             </div>
           </label>
-
           {/* フォント種類 */}
           <label>
             フォント種類:
@@ -192,29 +246,24 @@ const App = () => {
               <option value="Roboto">Roboto</option>
               <option value="Arial">Arial</option>
               <option value="Kosugi Maru">Kosugi Maru</option>
-              <option value="Arial">Arial</option>
               <option value="'M PLUS Rounded 1c'">M PLUS Rounded</option>
               <option value="'Zen Kaku Gothic New'">Zen Kaku Gothic</option>
               <option value="sans-serif">sans-serif</option>
-
             </select>
           </label>
-
           {/* 文字色 */}
-        <label>
-          文字色:
-          <input
-            type="color"
-            value={subtitleStyle.color}
-            onChange={(e) =>
-              setSubtitleStyle((prev) => ({ ...prev, color: e.target.value }))
-            }
-            className="color-input"
-          />
-        </label>
-
+          <label>
+            文字色:
+            <input
+              type="color"
+              value={subtitleStyle.color}
+              onChange={(e) =>
+                setSubtitleStyle((prev) => ({ ...prev, color: e.target.value }))
+              }
+              className="color-input"
+            />
+          </label>
           {/* 縁色 */}
-
           <label>
             縁色:
             <input
@@ -226,7 +275,6 @@ const App = () => {
               className="color-input"
             />
           </label>
-
           <label>
             背景色（クロマキー）:
             <input
@@ -234,9 +282,8 @@ const App = () => {
               value={bgColor}
               onChange={(e) => setBgColor(e.target.value)}
               className="color-input"
-          />
+            />
           </label>
-
           <button onClick={() => setShowSettings((prev) => !prev)}>
             {showSettings ? "❌ 設定を閉じる" : "⚙️ 設定"}
           </button>
